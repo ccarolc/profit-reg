@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Modelagem via regressão linear do lucro de Startups</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Caroline Cogo Carneosso" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link href="libs/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="libs/remark-css-0.0.1/default-fonts.css" rel="stylesheet" />
+    <script src="libs/kePrint-0.0.1/kePrint.js"></script>
+    <link href="libs/lightable-0.0.1/lightable.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Modelagem via regressão linear do lucro de Startups
+]
+.author[
+### Caroline Cogo Carneosso
+]
+.date[
+### agosto 2022
+]
+
+---
+
+class: center, middle
+
+
+
+
+
+# Introdução
+
+
+
+Startup é uma empresa inovadora com custos de manutenção muito baixos, mas que consegue crescer rapidamente e gerar lucros cada vez maiores. Além disso, possui um modelo de negócios repetível, escalável, em um cenário de incertezas e soluções a serem desenvolvidas. 
+
+Assim, a proposta do presente trabalho é propor um modelo de regressão
+linear que seja capaz de avaliar o efeito das  covariáveis  na média da variável  y e por consequência ter uma boa predição dos valores de y. Para a validação deste modelo será utilizado critérios de seleção, gráficos para a análise de diagnóstico e influência, tais como: alavancagem, distância de Cook, envelope simulado, entre outras técnicas gráficas.
+
+---
+class: center, middle
+O banco de dados é referente a detalhes da receita de 50 Startups dos estados de New York, California e Florida, disponível na plataforma Kaggle.
+
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;'&gt;
+&lt;caption&gt;Descrição da variáveis&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:center;"&gt; Variável &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Descrição &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; `\(y\)` profit &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Lucro total da Startup &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; `\(x_{1}\)` adm &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Gastos com Administração &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; `\(x_{2}\)` rdspend &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Gastos com Pesquisa e Desenvolvimento &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; `\(x_{3}\)` mkt &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Gastos com Marketing &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:center;"&gt; `\(x_{4}\)` estado &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Estado da Startup, New York, California ou Florida &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+
+Para fins de interpretação vamos considerar os valores em dólares. O banco de dados possui 50 observações e 5 variáveis. Além disso, foram criadas 2 variáveis dummies para a variável categórica estado, utilizando o estado da California como base, ou seja, foram acrescentadas as cováriaveis: estadoFlorida e estadoNew York.
+---
+class: center, middle
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;'&gt;
+&lt;caption&gt;Análise descritiva das variáveis.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt;    rdspend &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt;      adm &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt;      mkt &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt;        estado &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt;     profit &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Min.   :     0 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Min.   : 51283 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Min.   :     0 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; California:17 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Min.   : 14681 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1st Qu.: 39936 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1st Qu.:103731 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1st Qu.:129300 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Florida   :16 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1st Qu.: 90139 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Median : 73051 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Median :122700 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Median :212716 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; New York  :17 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Median :107978 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Mean   : 73722 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Mean   :121345 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Mean   :211025 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Mean   :112013 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3rd Qu.:101603 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3rd Qu.:144842 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3rd Qu.:299469 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3rd Qu.:139766 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt;  &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Max.   :165349 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Max.   :182646 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Max.   :471784 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; NA &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; Max.   :192262 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+class: center, middle
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;'&gt;
+&lt;caption&gt;Correlação entre as variáveis.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; rdspend &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; adm &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; mkt &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; profit &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; rdspend &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.000 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.242 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.724 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.973 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; adm &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.242 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.000 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.032 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.201 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; mkt &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.724 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.032 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.000 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.748 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; profit &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.973 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.201 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.748 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.000 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig1-1.png" alt="Gráfico de dispersões"  /&gt;
+&lt;p class="caption"&gt;Gráfico de dispersões&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+
+# Modelo inicial
+
+`$$y = \beta_{0} + \beta_{1}x_{1} + \beta_{2}x_{2} + \beta_{3}x_{3} + \beta_{4}x_{4}+\epsilon.$$`
+No modelo inicial, apenas o intercepto e `\(x_{2}\)` apresentaram significância. O modelo possui coeficiente de determinação (R2) de 0.951, e R2 ajustado `\((\bar{R2})\)` de 0.945.
+
+---
+class: center, middle
+
+
+
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;border-bottom: 0;'&gt;
+&lt;caption&gt;Coeficientes para o modelo inicial&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Estimate &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Std. Error &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; t value &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; p.value &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 50125.344 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 6884.820 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 7.281 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.001*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; adm &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.027 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.052 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.517 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.608 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; rdspend &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.806 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.046 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 17.369 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.001*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; mkt &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.027 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.017 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 1.574 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.123 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; estadoFlorida &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 198.789 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3371.007 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.059 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.953 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; estadoNew York &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -41.887 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 3256.039 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; -0.013 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.99 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;tfoot&gt;&lt;tr&gt;&lt;td style="padding: 0; " colspan="100%"&gt;
+&lt;span style="font-style: italic;text-decoration: underline;"&gt;Note: &lt;/span&gt; &lt;sup&gt;&lt;/sup&gt; Signif. codes 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 &lt;/td&gt;&lt;/tr&gt;&lt;/tfoot&gt;
+&lt;/table&gt;
+
+Entretanto, ao aplicar a função `\(step\)` que analisa através do critério de informação de Akaike (AIC) o melhor modelo a ser proposto, e retira possíveis covariáveis não explicativas, o método selecionou como significativa o intercepto e as covariáveis `\(x_{2}\)` e `\(x_{3}\)`.
+---
+class: center, middle
+
+# Modelo ajustado
+
+Após sucessivas aplicações da função `\(step\)`, testando as combinações das covariáveis e diversas análises, de pontos influentes e gráficas, chegamos ao modelo ajustado apresentado.
+
+`$$y = \beta_{0} + \beta_{2}x_{2} + \beta_{3}x_{3}+\epsilon.$$`
+
+O intercepto e todas as covariáveis foram significativas `\((x_{2}, x_{3})\)`, para isso foi necessário retirar as observações **47 e 50** do banco de dados original.
+
+---
+class: center, middle
+
+
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;border-bottom: 0;'&gt;
+&lt;caption&gt;Coeficientes para o modelo ajustado&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Estimate &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; Std. Error &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; t value &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; p.value &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; (Intercept) &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 50172.047 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 2333.087 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 21.50 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.001*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; rdspend &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.751 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.039 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 19.43 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.001*** &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; mkt &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.035 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.014 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 2.51 &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 0.01* &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;tfoot&gt;&lt;tr&gt;&lt;td style="padding: 0; " colspan="100%"&gt;
+&lt;span style="font-style: italic;text-decoration: underline;"&gt;Note: &lt;/span&gt; &lt;sup&gt;&lt;/sup&gt; Signif. codes 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 &lt;/td&gt;&lt;/tr&gt;&lt;/tfoot&gt;
+&lt;/table&gt;
+
+---
+class: center, middle
+# Análise de diagnóstico e influência
+
+
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig2-1.png" alt="Gráfico para a alavancagem"  /&gt;
+&lt;p class="caption"&gt;Gráfico para a alavancagem&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig3-1.png" alt="Gráfico para a Distância de Cook"  /&gt;
+&lt;p class="caption"&gt;Gráfico para a Distância de Cook&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig4-1.png" alt="Gráficos para o DFFIT e Dfbeta"  /&gt;
+&lt;p class="caption"&gt;Gráficos para o DFFIT e Dfbeta&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig6-1.png" alt="Gráficos para os Dfbetas"  /&gt;
+&lt;p class="caption"&gt;Gráficos para os Dfbetas&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/fig5-1.png" alt="Gráficos para o resíduo e histograma"  /&gt;
+&lt;p class="caption"&gt;Gráficos para o resíduo e histograma&lt;/p&gt;
+&lt;/div&gt;
+---
+class: center, middle
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/env-1.png" alt="Gráfico de Envelope Simulado"  /&gt;
+&lt;p class="caption"&gt;Gráfico de Envelope Simulado&lt;/p&gt;
+&lt;/div&gt;
+
+---
+class: center, middle
+
+# Suposições do modelo
+
+Para que o modelo seja validado é necessário confirmar as suposições abaixo através de testes.
+
+-   [S0] O modelo está corretamente especificado.
+
+-   [S1] A média dos erros é zero.
+
+-   [S2] Homoscedasticidade dos erros.
+
+-   [S3] Não há autocorrelação.
+
+-   [S4] Ausência de multicolinearidade.
+
+-   [S5] Normalidade dos erros.
+
+Para testes de hipóteses, se `\(\alpha&gt;p-valor\)`, então rejeita-se a hipótese nula (**H0**).
+
+
+---
+## Teste para a [S0]
+
+Teste RESET de especificação sob **H0**: O modelo está corretamente especificado. Com p-valor igual a 0.24, ao nível de significância igual a `\(\alpha=0.05\)`, não rejeitamos **H0**. Logo, não há evidências de incorreta especificação do modelo.
+
+## Teste para a [S1]
+
+Teste t para a média dos errros sob **H0**: média dos erros é igual a zero. Com p-valor igual a 0.996, ao nível de significância igual a `\(\alpha=0.05\)`, conclui-se que não rejeitamos **H0**. Logo, a média dos erros é igual a zero.
+
+## Teste para a [S2]
+
+Teste de Bressch-Pagan (Koenker) de Heteroscedasticidade sob H0: erros são
+homoscedásticos. Com p-valor igual a 0.999, ao nível de significância igual a `\(\alpha=0.05\)`, conclui-se que não rejeitamos **H0**. Logo, os erros são
+homoscedásticos.
+---
+## Teste para a [S3]
+
+Teste de Durbin-Watson de autocorrelação sob **H0**: não há autocorrelação. Com p-valor igual a 0.047, ao nível de significância igual a
+`\(\alpha=0.05\)`, conclui-se que rejeitamos **H0**.
+
+&lt;div class="figure" style="text-align: center"&gt;
+&lt;img src="apresentacao_files/figure-html/acf-1.png" alt="Gráfico da função de autocorrelação"  /&gt;
+&lt;p class="caption"&gt;Gráfico da função de autocorrelação&lt;/p&gt;
+&lt;/div&gt;
+---
+## Teste para a [S4]
+
+Usa-se Fatores de Inflação de Variância (VIF) para detectar multicolinearidade. Em que, VIF \&gt; 10 indica multicolinearidade e VIF=1 seria o ideal.
+
+&lt;table class=" lightable-classic" style='font-family: "Arial Narrow", "Source Sans Pro", sans-serif; margin-left: auto; margin-right: auto;'&gt;
+&lt;caption&gt;Fatores de Inflação de Variância para as variáveis do modelo ajustado.&lt;/caption&gt;
+ &lt;thead&gt;
+  &lt;tr&gt;
+   &lt;th style="text-align:left;"&gt;   &lt;/th&gt;
+   &lt;th style="text-align:center;"&gt; x &lt;/th&gt;
+  &lt;/tr&gt;
+ &lt;/thead&gt;
+&lt;tbody&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; rdspend &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 2.38 &lt;/td&gt;
+  &lt;/tr&gt;
+  &lt;tr&gt;
+   &lt;td style="text-align:left;"&gt; mkt &lt;/td&gt;
+   &lt;td style="text-align:center;"&gt; 2.38 &lt;/td&gt;
+  &lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+Percebe-se pela Tabela, que o valor está próximo a 1, para `\(x_{2}\)` e `\(x_{3}\)`. Logo, não há multicolinearidade. 
+
+## Teste para a [S5]
+
+Teste Jarque-Bera de Normalidade, **H0**: Os erros possuem distribuição
+normal. Com p-valor igual a 0.882, ao nível de significância igual a
+`\(\alpha=0.05\)`, conclui-se que não rejeitamos **H0**. Logo, não existem indícios de não normalidade dos erros.
+
+---
+class: center, middle
+
+# Modelo final
+
+O modelo apresentou `\(R2=0.96\)`, ou seja, `\(96\%\)` da variação da média do lucro das Startups é explicada por `\(x_{2}\)` e `\(x_{3}\)`. Além disso, o critério de seleção do modelo é de `\((\bar{R2})\)` ajustado igual a 0.959.
+
+`$$y = 50172.0465+0.7512 x_{2}+0.0353x_{3}.$$`
+
+Nota-se que as covariáveis influenciam positivamente na média de `\(y\)`, e o intercepto também. Para a covariável `\(x_{2}\)`, a cada 1 dólar gastos com pesquisa e desenvolvimento, adiciona-se 0.75 dólares no lucro da Startup, para a covariável `\(x_{3}\)`, a cada 1 dólar gastos com marketing, adiciona-se 0.03 doláres no lucro da Startup.
+---
+class: center, middle
+
+# Obrigada!
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

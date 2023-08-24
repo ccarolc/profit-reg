@@ -1,0 +1,412 @@
+---
+title: "Modelagem via regressão linear do lucro de Startups"
+subtitle: 
+author: "Caroline Cogo Carneosso"
+date: "`r format(Sys.time(), '%B %Y')`"
+header-includes:
+   - \usepackage[brazil]{babel}
+   - \usepackage{bm}
+   - \usepackage{float}
+encoding: "UTF-8"
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+editor_options:
+  chunk_output_type: console
+---
+class: center, middle
+```{r setup,include=F}
+# pacotes uteis
+library(hnp) # pacote para envelope simulado
+library(lmtest) # teste reset
+library(car) # para teste de multicolinearidade (fatores de inflacao de variancia)
+library(tseries) # teste de Jarque-Bera
+library(tidyverse)
+library(mypdf1)
+library(patchwork) #colocar os graf um do lado do outro
+
+knitr::opts_chunk$set(
+	echo = FALSE,
+	error = F,
+	fig.align = "center",
+	fig.height = 5, #altura
+	fig.pos = "H",
+	fig.width = 8.5, #largura
+	message = FALSE,
+	warning = FALSE
+)
+#widht=largura
+
+options(scipen=999) #desabilita result em notação científica 
+options(digits=3)
+options(OutDec=".")
+```
+
+```{r funções}
+graph=function(df,l){
+  df %>% 
+    as_tibble() %>% 
+      ggplot(aes(as.numeric(row.names(df  %>% as_tibble())),value))+
+      geom_point(color="red")+
+      geom_hline(yintercept=l, linetype="dashed", color = "navy")+
+      geom_hline(yintercept=-l, linetype="dashed", color = "navy")+
+      labs(x="Índice")
+    
+}
+graph2=function(df,l){
+  df %>% 
+    as_tibble() %>% 
+      ggplot(aes(as.numeric(row.names(df  %>% as_tibble())),value))+
+      geom_point(color="red")+
+      geom_hline(yintercept=l, linetype="dashed", color = "navy")+
+      labs(x="Índice")
+    
+}
+```
+
+
+# Introdução
+
+```{r, include=FALSE}
+## Importando os dados
+dados<- read.csv("50_Startups.csv",h=T) |> 
+  mutate(State=as.factor(State))
+
+dados<-dados |> 
+  rename(rdspend=R.D.Spend,adm=Administration,mkt=Marketing.Spend,
+         profit=Profit,estado=State)
+
+head(dados)
+attach(dados)
+
+## Variaveis:
+#Research and development spend 
+#Administration
+#marketing spend
+#profit= lucro da empresa/startup
+#state
+# A ideia eh modelar y, no caso profit, em funcao das demais
+```
+
+Startup é uma empresa inovadora com custos de manutenção muito baixos, mas que consegue crescer rapidamente e gerar lucros cada vez maiores. Além disso, possui um modelo de negócios repetível, escalável, em um cenário de incertezas e soluções a serem desenvolvidas. 
+
+Assim, a proposta do presente trabalho é propor um modelo de regressão
+linear que seja capaz de avaliar o efeito das  covariáveis  na média da variável  y e por consequência ter uma boa predição dos valores de y. Para a validação deste modelo será utilizado critérios de seleção, gráficos para a análise de diagnóstico e influência, tais como: alavancagem, distância de Cook, envelope simulado, entre outras técnicas gráficas.
+
+---
+class: center, middle
+O banco de dados é referente a detalhes da receita de 50 Startups dos estados de New York, California e Florida, disponível na plataforma Kaggle.
+
+```{r tab0, include=T}
+#profit~adm+rdspend+mkt+estado
+var = c(' $y$ profit', '$x_{1}$ adm', '$x_{2}$ rdspend', '$x_{3}$ mkt', '$x_{4}$ estado')
+desc = c('Lucro total da Startup', 'Gastos com Administração', 'Gastos com Pesquisa e Desenvolvimento', 'Gastos com Marketing', 'Estado da Startup, New York, California ou Florida')
+
+data.frame(Variável = var, Descrição = desc) |> 
+  mypdf1::pdf1_tbl("Descrição da variáveis", format = "html")
+```
+
+
+Para fins de interpretação vamos considerar os valores em dólares. O banco de dados possui `r nrow(dados)` observações e `r ncol(dados)` variáveis. Além disso, foram criadas 2 variáveis dummies para a variável categórica estado, utilizando o estado da California como base, ou seja, foram acrescentadas as cováriaveis: estadoFlorida e estadoNew York.
+---
+class: center, middle
+```{r tab1, include=TRUE, results='asis'}
+ summary(dados, digits = 2) |> 
+  mypdf1::pdf1_tbl("Análise descritiva das variáveis.")
+  
+```
+---
+class: center, middle
+```{r tab2, include=TRUE}
+dados |> 
+  select_if(is.numeric) |> 
+  cor() |> 
+  mypdf1::pdf1_tbl("Correlação entre as variáveis.")# correlacao
+```
+---
+class: center, middle
+```{r fig1, fig.cap="Gráfico de dispersões"}
+plot(dados[,-4]) # diagrama de dispersao
+```
+---
+class: center, middle
+
+# Modelo inicial
+
+$$y = \beta_{0} + \beta_{1}x_{1} + \beta_{2}x_{2} + \beta_{3}x_{3} + \beta_{4}x_{4}+\epsilon.$$
+No modelo inicial, apenas o intercepto e $x_{2}$ apresentaram significância. O modelo possui coeficiente de determinação (R2) de 0.951, e R2 ajustado $(\bar{R2})$ de 0.945.
+
+---
+class: center, middle
+
+```{r, results='hide'}
+fit0<-lm(profit~adm+rdspend+mkt+estado, data = dados)
+summary(fit0)
+
+step(fit0)
+#pelo step seleciona rdspend, mkt
+
+#RETIRANDO as outras variaveis 
+fit<-lm(profit~rdspend+mkt, data = dados)
+summary(fit)
+
+dados45<-dados[c(-47,-50),]
+
+## ajustando o modelo
+fit50<- lm(profit~adm+rdspend+mkt+estado,data=dados45)
+summary(fit50)
+
+step(fit50)
+#deu significativo por step, rdspend e mkt
+
+fit<-lm(profit~rdspend+mkt, data = dados45)
+summary(fit)
+
+# Verifique R2, R2-ajustado, teste F e testes t
+# Mas note que soh podemos "acreditar" nesses testes apos analise de 
+# diagnostico e os varios testes estudados. Veja a seguir.
+```
+
+```{r modinicial, include=TRUE}
+fit0<-lm(profit~adm+rdspend+mkt+estado, data = dados)
+a<-summary(fit0)
+a$coefficients |>
+  as.data.frame() |> 
+  rename(p.value = "Pr(>|t|)") |>
+  mutate(p.value = case_when(
+    p.value <= 0.001 ~ "0.001***",
+    (0.001 < p.value & p.value <= 0.01) ~ "0.01**",
+    (0.01 < p.value & p.value <= 0.05) ~ "0.01*",
+    TRUE ~ as.character(round(p.value, 3))
+  )) |>
+  mypdf1::pdf1_tbl("Coeficientes para o modelo inicial") |> 
+  kableExtra::footnote(general = "Signif. codes 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 ",footnote_as_chunk = T, title_format = c("italic", "underline")) 
+
+```
+
+Entretanto, ao aplicar a função $step$ que analisa através do critério de informação de Akaike (AIC) o melhor modelo a ser proposto, e retira possíveis covariáveis não explicativas, o método selecionou como significativa o intercepto e as covariáveis $x_{2}$ e $x_{3}$.
+---
+class: center, middle
+
+# Modelo ajustado
+
+Após sucessivas aplicações da função $step$, testando as combinações das covariáveis e diversas análises, de pontos influentes e gráficas, chegamos ao modelo ajustado apresentado.
+
+$$y = \beta_{0} + \beta_{2}x_{2} + \beta_{3}x_{3}+\epsilon.$$
+
+O intercepto e todas as covariáveis foram significativas $(x_{2}, x_{3})$, para isso foi necessário retirar as observações **47 e 50** do banco de dados original.
+
+---
+class: center, middle
+```{r, include=F, results='hide'}
+dados45<-dados[c(-47,-50),]
+
+## ajustando o modelo
+fit50<- lm(profit~adm+rdspend+mkt+estado,data=dados45)
+summary(fit50)
+
+step(fit50)
+#deu significativo por step, rdspend e mkt
+
+fit<-lm(profit~rdspend+mkt, data = dados45)
+summary(fit)
+```
+
+```{r modfinal, include=TRUE}
+fit<-lm(profit~rdspend+mkt, data = dados45)
+b<-summary(fit)
+# b$coefficients |>
+#   as.data.frame() |> 
+#   mutate(`Pr(>|t|)`=format.pval(`Pr(>|t|)`,eps = 0.01)) |> 
+#   mypdf1::pdf1_tbl("Coeficientes do Modelo ajustado") |> 
+#   kableExtra::footnote(general = "Signif. codes 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 ",footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+
+b$coefficients |>
+  as.data.frame() |>
+  rename(p.value = "Pr(>|t|)") |>
+  mutate(p.value = case_when(
+    p.value <= 0.001 ~ "0.001***",
+    (0.001 < p.value & p.value <= 0.01) ~ "0.01**",
+    (0.01 < p.value & p.value <= 0.05) ~ "0.01*",
+    TRUE ~ as.character(round(p.value, 3))
+  )) |>
+  mypdf1::pdf1_tbl("Coeficientes para o modelo ajustado") |>
+  kableExtra::footnote(general = "Signif. codes 0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1 ",footnote_as_chunk = T, title_format = c("italic", "underline"))
+
+```
+
+---
+class: center, middle
+# Análise de diagnóstico e influência
+
+```{r, include=F}
+n<-dim(dados45)[1] # tamanho da amostra
+
+g0<-hatvalues(fit) |> 
+  graph2(2*(fit$rank/n))+
+  labs(x="Índice", y="Alavancagem")
+
+g1<-cooks.distance(fit) |> 
+graph2(4/(n-fit$rank))+
+  labs(x="Índice",y="Distância de Cook")
+
+g2<-dffits(fit) |> 
+ graph(2*sqrt(fit$rank /n))+
+  labs(title="Dffits",x="Índice",y="Dffits")   
+dfbetas(fit)# cada beta tem seu DF
+
+g3<-dfbetas(fit)[,1] |> 
+  graph(limite<-2/sqrt(n))+
+  labs(title ="Dfbeta 1",x="Índice", y="Dfbeta 1")
+
+g4<-dfbetas(fit)[,2] |> 
+  graph(limite<-2/sqrt(n))+
+  labs(title ="Dfbeta 2",x="Índice", y="Dfbeta 2")
+
+g5<-dfbetas(fit)[,3] |> 
+  graph(limite<-2/sqrt(n))+
+  labs(title ="Dfbeta 3",x="Índice", y="Dfbeta 3")
+
+residuo <- rstudent(fit)
+g6<-residuo |> 
+  graph(3)+
+  labs(title ="Resíduos", x="Índice", y="Resíduos")
+
+g7<-residuo |> 
+  tibble::tibble() |> 
+  ggplot(aes(residuo))+geom_histogram(bins = 6,fill="white", colour="black")+
+  labs(x="Resíduo",title="Histograma dos resíduos")
+
+#hist(residuo) # histograma dos residuos
+```
+
+```{r fig2, include=TRUE, fig.cap="Gráfico para a alavancagem"}
+g0
+```
+---
+class: center, middle
+```{r fig3,include=TRUE, fig.cap="Gráfico para a Distância de Cook"}
+g1
+```
+---
+class: center, middle
+```{r fig4, include=TRUE, fig.cap="Gráficos para o DFFIT e Dfbeta"}
+g2+g3
+
+```
+---
+class: center, middle
+```{r fig6, include=TRUE, fig.cap="Gráficos para os Dfbetas"}
+g4+g5
+```
+---
+class: center, middle
+```{r fig5, include=TRUE, fig.cap="Gráficos para o resíduo e histograma"}
+g6+g7
+```
+---
+class: center, middle
+```{r env, include=T, results='hide', fig.cap="Gráfico de Envelope Simulado"}
+# envelope simulado baseado nos residuos studentizados
+#hnp(fit,resid.type="student",halfnormal = F) # envelope simulado 
+
+residuo %>% 
+  as_tibble() %>% 
+  ggplot(aes(sample = value)) +
+  qqplotr::geom_qq_band(alpha = 0.5, fill="white", col="black",B=150,bandType = "boot") +
+  qqplotr::stat_qq_line(size=0.5, linetype="dashed") + 
+  qqplotr::stat_qq_point(size=1.3) +
+  scale_fill_discrete("Bandtype")+
+  labs(x = "Quantis teóricos", y = "Resíduos")
+```
+
+---
+class: center, middle
+
+# Suposições do modelo
+
+Para que o modelo seja validado é necessário confirmar as suposições abaixo através de testes.
+
+-   [S0] O modelo está corretamente especificado.
+
+-   [S1] A média dos erros é zero.
+
+-   [S2] Homoscedasticidade dos erros.
+
+-   [S3] Não há autocorrelação.
+
+-   [S4] Ausência de multicolinearidade.
+
+-   [S5] Normalidade dos erros.
+
+Para testes de hipóteses, se $\alpha>p-valor$, então rejeita-se a hipótese nula (**H0**).
+
+```{r, include=FALSE}
+s0<-resettest(fit)
+s1<-t.test(residuo,mu=0,alternative="two.sided")
+s2<-bptest(fit, studentize = TRUE)
+s3<-dwtest(fit)
+s4<-vif(fit)
+s5<-jarque.bera.test(residuo)
+
+```
+---
+## Teste para a [S0]
+
+Teste RESET de especificação sob **H0**: O modelo está corretamente especificado. Com p-valor igual a `r s0$p.value`, ao nível de significância igual a $\alpha=0.05$, não rejeitamos **H0**. Logo, não há evidências de incorreta especificação do modelo.
+
+## Teste para a [S1]
+
+Teste t para a média dos errros sob **H0**: média dos erros é igual a zero. Com p-valor igual a `r s1$p.value`, ao nível de significância igual a $\alpha=0.05$, conclui-se que não rejeitamos **H0**. Logo, a média dos erros é igual a zero.
+
+## Teste para a [S2]
+
+Teste de Bressch-Pagan (Koenker) de Heteroscedasticidade sob H0: erros são
+homoscedásticos. Com p-valor igual a `r s2$p.value`, ao nível de significância igual a $\alpha=0.05$, conclui-se que não rejeitamos **H0**. Logo, os erros são
+homoscedásticos.
+---
+## Teste para a [S3]
+
+Teste de Durbin-Watson de autocorrelação sob **H0**: não há autocorrelação. Com p-valor igual a `r s3$p.value`, ao nível de significância igual a
+$\alpha=0.05$, conclui-se que rejeitamos **H0**.
+
+```{r acf, fig.cap="Gráfico da função de autocorrelação", include=TRUE}
+
+acf(rstudent(fit),lag.max=50)
+```
+---
+## Teste para a [S4]
+
+Usa-se Fatores de Inflação de Variância (VIF) para detectar multicolinearidade. Em que, VIF \> 10 indica multicolinearidade e VIF=1 seria o ideal.
+
+```{r tab30, include=TRUE}
+s4 |> pdf1_tbl("Fatores de Inflação de Variância para as variáveis do modelo ajustado.")
+```
+
+Percebe-se pela Tabela, que o valor está próximo a 1, para $x_{2}$ e $x_{3}$. Logo, não há multicolinearidade. 
+
+## Teste para a [S5]
+
+Teste Jarque-Bera de Normalidade, **H0**: Os erros possuem distribuição
+normal. Com p-valor igual a `r s5$p.value`, ao nível de significância igual a
+$\alpha=0.05$, conclui-se que não rejeitamos **H0**. Logo, não existem indícios de não normalidade dos erros.
+
+---
+class: center, middle
+
+# Modelo final
+
+O modelo apresentou $R2=0.96$, ou seja, $96\%$ da variação da média do lucro das Startups é explicada por $x_{2}$ e $x_{3}$. Além disso, o critério de seleção do modelo é de $(\bar{R2})$ ajustado igual a 0.959.
+
+$$y = 50172.0465+0.7512 x_{2}+0.0353x_{3}.$$
+
+Nota-se que as covariáveis influenciam positivamente na média de $y$, e o intercepto também. Para a covariável $x_{2}$, a cada 1 dólar gastos com pesquisa e desenvolvimento, adiciona-se 0.75 dólares no lucro da Startup, para a covariável $x_{3}$, a cada 1 dólar gastos com marketing, adiciona-se 0.03 doláres no lucro da Startup.
+---
+class: center, middle
+
+# Obrigada!
